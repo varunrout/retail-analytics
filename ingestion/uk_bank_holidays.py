@@ -30,7 +30,7 @@ from ingestion.config import (
 logger: logging.Logger = setup_logging(__name__)
 
 # ---------------------------------------------------------------------------
-# Demo data – 30 known UK (England & Wales) bank holidays 2020-2026
+# Demo data – 59 known UK (England & Wales) bank holidays 2020-2026
 # ---------------------------------------------------------------------------
 _DEMO_HOLIDAYS: list[dict] = [
     # 2020
@@ -161,7 +161,7 @@ def parse_bank_holidays(raw: dict) -> pd.DataFrame:
 
 
 def _demo_bank_holidays() -> pd.DataFrame:
-    """Return a hardcoded DataFrame of known UK bank holidays (demo mode)."""
+    """Return a hardcoded DataFrame of 59 known UK bank holidays (demo mode)."""
     logger.info("DEMO_MODE: using hardcoded bank holiday data (%d entries)", len(_DEMO_HOLIDAYS))
     records = [
         {
