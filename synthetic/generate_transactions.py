@@ -83,6 +83,35 @@ def _season_from_month(month: int) -> str:
     return "Winter"
 
 
+def _generate_invoice_line_counts(
+    n: int,
+    n_invoices: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    counts = rng.choice(
+        [1, 2, 3, 4, 5, 6],
+        size=n_invoices,
+        replace=True,
+        p=[0.26, 0.28, 0.20, 0.14, 0.08, 0.04],
+    ).astype(int)
+    total = int(counts.sum())
+
+    while total < n:
+        idx = int(rng.integers(0, n_invoices))
+        counts[idx] += 1
+        total += 1
+
+    while total > n:
+        valid = np.where(counts > 1)[0]
+        if len(valid) == 0:
+            break
+        idx = int(valid[rng.integers(0, len(valid))])
+        counts[idx] -= 1
+        total -= 1
+
+    return counts
+
+
 def generate_base_transactions(
     n: int = N_TRANSACTIONS, seed: int = RANDOM_SEED
 ) -> pd.DataFrame:
@@ -141,21 +170,13 @@ def generate_base_transactions(
     )
     day_weights /= day_weights.sum()
 
-    # Draw transaction dates
-    chosen_day_indices = rng.choice(len(all_days), size=n, replace=True, p=day_weights)
-    invoice_dates = all_days[chosen_day_indices]
+    n_invoices = max(1, n // 3)
+    invoice_pool = np.array([f"INV{str(i).zfill(6)}" for i in range(1, n_invoices + 1)])
+    invoice_line_counts = _generate_invoice_line_counts(n=n, n_invoices=n_invoices, rng=rng)
 
-    # -----------------------------------------------------------------------
-    # SKU assignment — category-seasonal boost implemented via oversampling
-    # -----------------------------------------------------------------------
-    # Build base SKU weights (uniform by default)
-    sku_base_weights = np.ones(n_skus, dtype=float)
-
-    # We'll assign SKUs transaction-by-transaction to account for
-    # per-date category boosts, but for performance we do a vectorised
-    # approximate approach: compute per-transaction SKU weights based on
-    # month of the transaction date.
-    months = pd.Series(invoice_dates).dt.month.values  # shape (n,)
+    chosen_invoice_days = rng.choice(len(all_days), size=n_invoices, replace=True, p=day_weights)
+    invoice_dates_by_invoice = all_days[chosen_invoice_days]
+    invoice_months = pd.Series(invoice_dates_by_invoice).dt.month.values
 
     # Map category → SKU indices
     cat_to_idx: dict[str, np.ndarray] = {
@@ -168,129 +189,99 @@ def generate_base_transactions(
     for month, cat, mult in _CATEGORY_SEASONAL:
         month_cat_boost[month][cat] = mult
 
-    # Assign SKU indices one transaction at a time (vectorised within month)
-    sku_indices = np.empty(n, dtype=int)
+    sku_base_weights = np.ones(n_skus, dtype=float)
+    month_weight_lookup: dict[int, np.ndarray] = {}
     for month in range(1, 13):
-        mask = months == month
-        count = mask.sum()
-        if count == 0:
-            continue
         weights = sku_base_weights.copy()
         for cat, mult in month_cat_boost[month].items():
             if cat in cat_to_idx and len(cat_to_idx[cat]) > 0:
                 weights[cat_to_idx[cat]] *= mult
         weights /= weights.sum()
-        sku_indices[mask] = rng.choice(n_skus, size=count, replace=True, p=weights)
+        month_weight_lookup[month] = weights
 
-    selected_skus = sku_df.iloc[sku_indices].reset_index(drop=True)
+    line_records: list[dict[str, object]] = []
 
-    # -----------------------------------------------------------------------
-    # Core transaction fields
-    # -----------------------------------------------------------------------
-    # Invoice numbers (some invoices contain multiple lines)
-    n_invoices = max(1, n // 3)
-    invoice_pool = [f"INV{str(i).zfill(6)}" for i in range(1, n_invoices + 1)]
-    invoice_nos = rng.choice(invoice_pool, size=n, replace=True)
-
-    # Quantity: mostly 1–6, small % bulk orders
-    quantity = rng.choice(
-        [1, 2, 3, 4, 5, 6, 12, 24],
-        size=n,
-        replace=True,
-        p=[0.40, 0.25, 0.12, 0.08, 0.06, 0.04, 0.03, 0.02],
-    )
-
-    # Returns: ~3 % of transactions are negative quantity
-    is_return = rng.random(n) < 0.03
-    quantity = np.where(is_return, -np.abs(quantity), quantity)
-
-    # Customer IDs (FK to CRM; ~15 % guest checkouts → NaN)
     n_cust = 10_000
-    cust_ids_pool = [f"CUST{str(i).zfill(5)}" for i in range(1, n_cust + 1)]
-    raw_cust = rng.choice(cust_ids_pool, size=n, replace=True)
-    is_guest = rng.random(n) < 0.15
-    customer_ids = np.where(is_guest, None, raw_cust)
+    cust_ids_pool = np.array([f"CUST{str(i).zfill(5)}" for i in range(1, n_cust + 1)])
 
-    # Country: ~85 % United Kingdom
-    countries = rng.choice(
-        ["United Kingdom", "Republic of Ireland", "Germany", "France", "USA"],
-        size=n,
-        replace=True,
-        p=[0.85, 0.05, 0.04, 0.03, 0.03],
-    )
+    for invoice_idx, line_count in enumerate(invoice_line_counts):
+        invoice_no = invoice_pool[invoice_idx]
+        invoice_date = invoice_dates_by_invoice[invoice_idx]
+        month = int(invoice_months[invoice_idx])
+        weights = month_weight_lookup[month]
+        sampled_sku_indices = rng.choice(n_skus, size=int(line_count), replace=False, p=weights)
 
-    # -----------------------------------------------------------------------
-    # Channel
-    # -----------------------------------------------------------------------
-    channels = rng.choice(_CHANNELS, size=n, replace=True, p=_CHANNEL_WEIGHTS)
+        customer_id = None if rng.random() < 0.15 else str(rng.choice(cust_ids_pool))
+        country = str(
+            rng.choice(
+                ["United Kingdom", "Republic of Ireland", "Germany", "France", "USA"],
+                p=[0.85, 0.05, 0.04, 0.03, 0.03],
+            )
+        )
+        channel = str(rng.choice(_CHANNELS, p=_CHANNEL_WEIGHTS))
 
-    # -----------------------------------------------------------------------
-    # Promotional flags & discounts
-    # -----------------------------------------------------------------------
-    is_promotional = rng.random(n) < 0.20
-    discount_pct = np.where(
-        is_promotional,
-        rng.uniform(0.05, 0.40, size=n),
-        0.0,
-    ).round(4)
+        for sku_idx in sampled_sku_indices:
+            sku = sku_df.iloc[int(sku_idx)]
+            qty = int(
+                rng.choice(
+                    [1, 2, 3, 4, 5, 6, 12, 24],
+                    p=[0.40, 0.25, 0.12, 0.08, 0.06, 0.04, 0.03, 0.02],
+                )
+            )
+            return_flag = bool(rng.random() < 0.03)
+            qty = -abs(qty) if return_flag else qty
+            promo_flag = bool(rng.random() < 0.20)
+            discount = round(float(rng.uniform(0.05, 0.40)), 4) if promo_flag else 0.0
 
-    # -----------------------------------------------------------------------
-    # Revenue calculations
-    # -----------------------------------------------------------------------
-    unit_price = selected_skus["unit_price_gbp"].values.astype(float)
-    abs_quantity = np.abs(quantity).astype(float)
-    sign = np.where(is_return, -1, 1)
+            line_records.append(
+                {
+                    "invoice_no": str(invoice_no),
+                    "stock_code": str(sku["sku_id"]),
+                    "description": str(sku["product_name"]),
+                    "quantity": qty,
+                    "invoice_date": invoice_date,
+                    "unit_price_gbp": round(float(sku["unit_price_gbp"]), 2),
+                    "customer_id": customer_id,
+                    "country": country,
+                    "category": str(sku["category"]),
+                    "brand": str(sku["brand"]),
+                    "channel": channel,
+                    "is_promotional": promo_flag,
+                    "discount_pct": discount,
+                    "is_return": return_flag,
+                    "season": _season_from_month(month),
+                }
+            )
+
+    df = pd.DataFrame(line_records)
+
+    abs_quantity = df["quantity"].abs().astype(float)
+    sign = np.where(df["is_return"], -1, 1)
+    unit_price = df["unit_price_gbp"].astype(float)
 
     gross_sales_gbp = (sign * abs_quantity * unit_price).round(2)
-    discount_amount_gbp = (gross_sales_gbp * discount_pct).round(2)
+    discount_amount_gbp = (gross_sales_gbp * df["discount_pct"].astype(float)).round(2)
     net_revenue_gbp = (gross_sales_gbp - discount_amount_gbp).round(2)
 
-    # Gross margin: base category margin ± small noise
-    base_margins = np.array(
-        [_CATEGORY_MARGINS[cat] for cat in selected_skus["category"].values]
-    )
-    noise = rng.uniform(-0.05, 0.05, size=n)
+    base_margins = np.array([_CATEGORY_MARGINS[cat] for cat in df["category"].values])
+    noise = rng.uniform(-0.05, 0.05, size=len(df))
     gross_margin_pct = np.clip(base_margins + noise, 0.10, 0.80).round(4)
     gross_margin_gbp = (net_revenue_gbp * gross_margin_pct).round(2)
 
-    # -----------------------------------------------------------------------
-    # Season label
-    # -----------------------------------------------------------------------
-    seasons = np.array([_season_from_month(d.month) for d in invoice_dates])
+    df["gross_sales_gbp"] = gross_sales_gbp
+    df["discount_amount_gbp"] = discount_amount_gbp
+    df["net_revenue_gbp"] = net_revenue_gbp
+    df["gross_margin_pct"] = gross_margin_pct
+    df["gross_margin_gbp"] = gross_margin_gbp
 
-    # -----------------------------------------------------------------------
-    # Assemble DataFrame
-    # -----------------------------------------------------------------------
-    df = pd.DataFrame(
-        {
-            "invoice_no": invoice_nos,
-            "stock_code": selected_skus["sku_id"].values,
-            "description": selected_skus["product_name"].values,
-            "quantity": quantity,
-            "invoice_date": invoice_dates,
-            "unit_price_gbp": unit_price.round(2),
-            "customer_id": customer_ids,
-            "country": countries,
-            "category": selected_skus["category"].values,
-            "brand": selected_skus["brand"].values,
-            "channel": channels,
-            "is_promotional": is_promotional,
-            "discount_pct": discount_pct,
-            "gross_sales_gbp": gross_sales_gbp,
-            "discount_amount_gbp": discount_amount_gbp,
-            "net_revenue_gbp": net_revenue_gbp,
-            "gross_margin_pct": gross_margin_pct,
-            "gross_margin_gbp": gross_margin_gbp,
-            "is_return": is_return,
-            "season": seasons,
-        }
-    )
+    duplicate_pairs = int(df.duplicated(subset=["invoice_no", "stock_code"]).sum())
     logger.info(
-        "Generated %d transactions | returns=%d | promotional=%d | "
+        "Generated %d transactions | returns=%d | promotional=%d | invoice-sku duplicates=%d | "
         "total net revenue=£{:,.0f}".format(df["net_revenue_gbp"].sum()),
         len(df),
         df["is_return"].sum(),
         df["is_promotional"].sum(),
+        duplicate_pairs,
     )
     return df
 

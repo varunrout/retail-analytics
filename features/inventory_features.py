@@ -98,6 +98,11 @@ def compute_inventory_features(
     inv = inventory_df.copy()
     txn = transactions_df.copy()
 
+    if "stock_code" not in inv.columns and "sku_id" in inv.columns:
+        inv = inv.rename(columns={"sku_id": "stock_code"})
+    if "category_l1" not in txn.columns and "category" in txn.columns:
+        txn["category_l1"] = txn["category"]
+
     sku_col = "stock_code" if "stock_code" in txn.columns else "sku"
     txn["invoice_date"] = pd.to_datetime(txn["invoice_date"])
 
@@ -113,8 +118,25 @@ def compute_inventory_features(
 
     if sku_col not in inv.columns:
         inv = inv.reset_index()
+        if sku_col not in inv.columns and "sku_id" in inv.columns:
+            inv = inv.rename(columns={"sku_id": sku_col})
 
-    merged = inv.merge(daily_demand, on=sku_col, how="left")
+    merged = inv.merge(daily_demand, on=sku_col, how="left", suffixes=("_inventory", "_sales"))
+
+    if "avg_daily_demand_inventory" in merged.columns or "avg_daily_demand_sales" in merged.columns:
+        merged["avg_daily_demand"] = merged.get("avg_daily_demand_sales", pd.Series(index=merged.index)).combine_first(
+            merged.get("avg_daily_demand_inventory", pd.Series(index=merged.index))
+        )
+    elif "avg_daily_demand" not in merged.columns:
+        merged["avg_daily_demand"] = 0.0
+
+    if "demand_std_sales" in merged.columns or "demand_std_inventory" in merged.columns:
+        merged["demand_std"] = merged.get("demand_std_sales", pd.Series(index=merged.index)).combine_first(
+            merged.get("demand_std_inventory", pd.Series(index=merged.index))
+        )
+    elif "demand_std" not in merged.columns:
+        merged["demand_std"] = 0.0
+
     merged["avg_daily_demand"] = merged["avg_daily_demand"].fillna(0)
     merged["demand_std"] = merged["demand_std"].fillna(0)
 
@@ -143,7 +165,11 @@ def compute_inventory_features(
         abc = compute_abc_classification(revenue_by_sku)
         abc_df = abc.reset_index()
         abc_df.columns = [sku_col, "abc_class"]
-        merged = merged.merge(abc_df, on=sku_col, how="left")
+        merged = merged.merge(abc_df, on=sku_col, how="left", suffixes=("_inventory", "_computed"))
+        if "abc_class_computed" in merged.columns or "abc_class_inventory" in merged.columns:
+            merged["abc_class"] = merged.get("abc_class_computed", pd.Series(index=merged.index)).combine_first(
+                merged.get("abc_class_inventory", pd.Series(index=merged.index))
+            )
         merged["abc_class"] = merged["abc_class"].fillna("C")
 
     # Weekly sales matrix for XYZ
@@ -158,7 +184,11 @@ def compute_inventory_features(
         xyz = compute_xyz_classification(weekly_matrix.T)
         xyz_df = xyz.reset_index()
         xyz_df.columns = [sku_col, "xyz_class"]
-        merged = merged.merge(xyz_df, on=sku_col, how="left")
+        merged = merged.merge(xyz_df, on=sku_col, how="left", suffixes=("_inventory", "_computed"))
+        if "xyz_class_computed" in merged.columns or "xyz_class_inventory" in merged.columns:
+            merged["xyz_class"] = merged.get("xyz_class_computed", pd.Series(index=merged.index)).combine_first(
+                merged.get("xyz_class_inventory", pd.Series(index=merged.index))
+            )
         merged["xyz_class"] = merged["xyz_class"].fillna("Z")
 
     return merged

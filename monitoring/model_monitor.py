@@ -197,7 +197,12 @@ class ModelMonitor:
                     "null_count": int(df[col].isna().sum()),
                 }
             else:
-                stats_dict[col] = {"value_counts": df[col].value_counts().head(50).to_dict()}
+                stats_dict[col] = {
+                    "value_counts": {
+                        str(key): value
+                        for key, value in df[col].value_counts().head(50).to_dict().items()
+                    }
+                }
 
         out_path = self.baseline_dir / f"{model_name}_baseline.json"
         out_path.write_text(json.dumps(stats_dict, default=str), encoding="utf-8")

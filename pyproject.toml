@@ -22,7 +22,7 @@ classifiers = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["ingestion*", "synthetic*", "raw_to_bronze*", "features*", "models*", "data_quality*", "serving*", "monitoring*"]
+include = ["ingestion*", "synthetic*", "raw_to_bronze*", "features*", "models*", "data_quality*", "serving*", "monitoring*", "orchestration*"]
 
 [tool.black]
 line-length = 100

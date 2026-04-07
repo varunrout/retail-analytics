@@ -77,6 +77,14 @@ class FeatureStore:
         """Build per-SKU feature matrix for demand forecasting and inventory scoring."""
         self.logger.info("Building product feature matrix...")
 
+        transactions_df = transactions_df.copy()
+        if "category_l1" not in transactions_df.columns and "category" in transactions_df.columns:
+            transactions_df["category_l1"] = transactions_df["category"]
+        if inventory_df is not None and "stock_code" not in inventory_df.columns and "sku_id" in inventory_df.columns:
+            inventory_df = inventory_df.rename(columns={"sku_id": "stock_code"})
+        if costs_df is not None and "stock_code" not in costs_df.columns and "sku_id" in costs_df.columns:
+            costs_df = costs_df.rename(columns={"sku_id": "stock_code"})
+
         product_feats = compute_product_features(transactions_df, inventory_df, costs_df)
         price_feats = compute_price_features(transactions_df)
 
@@ -187,6 +195,7 @@ class FeatureStore:
             else:
                 self.logger.warning("No transactions data found. Using demo data.")
                 from models.model_utils import make_demo_transactions
+
                 transactions_df = make_demo_transactions()
 
         if inventory_df is None:

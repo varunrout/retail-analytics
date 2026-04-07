@@ -117,6 +117,8 @@ def compute_behavioural_features(
     """
     df = transactions_df.copy()
     df["invoice_date"] = pd.to_datetime(df["invoice_date"])
+    if "category_l1" not in df.columns and "category" in df.columns:
+        df["category_l1"] = df["category"]
 
     if reference_date is None:
         reference_date = df["invoice_date"].max().date()

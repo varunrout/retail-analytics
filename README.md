@@ -744,6 +744,12 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every pull reques
 
 ## 12. Portfolio & CV Context
 
+Additional project documentation:
+
+- [Detailed technical report](docs/technical_report.md)
+- [Portfolio-ready technical report](docs/technical_report_portfolio.md)
+- [GitHub and recruiter summary](docs/github_portfolio_summary.md)
+
 ### About This Project
 
 HealthBeauty360 was built as a **portfolio demonstration project** showcasing end-to-end data

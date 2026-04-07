@@ -30,6 +30,8 @@ def compute_product_features(
     """
     df = transactions_df.copy()
     df["invoice_date"] = pd.to_datetime(df["invoice_date"])
+    if "category_l1" not in df.columns and "category" in df.columns:
+        df["category_l1"] = df["category"]
 
     cutoff = df["invoice_date"].max() - pd.DateOffset(months=12)
     df12 = df[df["invoice_date"] >= cutoff]
@@ -142,6 +144,11 @@ def compute_product_features(
         agg = agg.merge(brand, on=sku_col, how="left")
     else:
         agg["brand"] = "Unknown"
+
+    if costs_df is not None:
+        costs_df = costs_df.copy()
+        if sku_col not in costs_df.columns and "sku_id" in costs_df.columns:
+            costs_df = costs_df.rename(columns={"sku_id": sku_col})
 
     if costs_df is not None and sku_col in costs_df.columns and "unit_cost_gbp" in costs_df.columns:
         costs_df = costs_df[[sku_col, "unit_cost_gbp"]].copy()
