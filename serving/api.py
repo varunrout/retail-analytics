@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
@@ -47,7 +46,7 @@ app.add_middleware(
 _CACHE: dict[str, pd.DataFrame] = {}
 
 
-def _load(path: Path) -> Optional[pd.DataFrame]:
+def _load(path: Path) -> pd.DataFrame | None:
     key = str(path)
     if key not in _CACHE:
         if not path.exists():
@@ -86,10 +85,10 @@ class ForecastResponse(BaseModel):
     product_id: str
     forecast_weeks: int
     forecasts: list[ForecastPoint]
-    validation_mape: Optional[float] = None
-    baseline_mape: Optional[float] = None
-    beats_baseline: Optional[bool] = None
-    reorder_point: Optional[float] = None
+    validation_mape: float | None = None
+    baseline_mape: float | None = None
+    beats_baseline: bool | None = None
+    reorder_point: float | None = None
 
 
 class CustomerSegmentResponse(BaseModel):
@@ -132,7 +131,7 @@ class ExecKPIsResponse(BaseModel):
     total_revenue_gbp: float
     units_sold: int
     avg_order_value_gbp: float
-    gross_margin_pct: Optional[float] = None
+    gross_margin_pct: float | None = None
     top_categories: list[dict]
     top_channels: list[dict]
 

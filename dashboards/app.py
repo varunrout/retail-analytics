@@ -148,10 +148,10 @@ def style_figure(fig: go.Figure) -> go.Figure:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=PALETTE["text"], family="Space Grotesk"),
-        title_font=dict(color=PALETTE["text"], family="Fraunces", size=22),
-        legend_font=dict(color=PALETTE["muted"]),
-        margin=dict(l=20, r=20, t=60, b=20),
+        font={"color": PALETTE["text"], "family": "Space Grotesk"},
+        title_font={"color": PALETTE["text"], "family": "Fraunces", "size": 22},
+        legend_font={"color": PALETTE["muted"]},
+        margin={"l": 20, "r": 20, "t": 60, "b": 20},
     )
     fig.update_xaxes(showgrid=False, zeroline=False, color=PALETTE["muted"])
     fig.update_yaxes(showgrid=True, gridcolor=PALETTE["grid"], zeroline=False, color=PALETTE["muted"])
@@ -199,7 +199,7 @@ def explain_channel_mix(channel_mix: pd.DataFrame) -> str:
 
 
 def explain_forecast(sku_forecast: pd.DataFrame) -> str:
-    first_row = sku_forecast.iloc[0]
+    sku_forecast.iloc[0]
     peak_row = sku_forecast.loc[sku_forecast["forecast_units"].idxmax()]
     avg_forecast = float(sku_forecast["forecast_units"].mean())
     uncertainty = float((sku_forecast["forecast_upper"] - sku_forecast["forecast_lower"]).mean())
@@ -325,7 +325,7 @@ with tab_overview:
                 title="Weekly Revenue Rhythm",
                 color_discrete_sequence=[PALETTE["teal"]],
             )
-            revenue_fig.update_traces(line=dict(width=2), fillcolor="rgba(79,168,154,0.25)")
+            revenue_fig.update_traces(line={"width": 2}, fillcolor="rgba(79,168,154,0.25)")
             st.plotly_chart(style_figure(revenue_fig), width="stretch")
             insight_box("Revenue insight", explain_weekly_revenue(weekly))
         with right:
@@ -387,9 +387,9 @@ with tab_forecast:
         left, right = st.columns([1.65, 1])
         with left:
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=sku_forecast["forecast_date"], y=sku_forecast["forecast_units"], mode="lines+markers", name="Forecast", line=dict(color=PALETTE["amber"], width=3)))
-            fig.add_trace(go.Scatter(x=sku_forecast["forecast_date"], y=sku_forecast["forecast_upper"], mode="lines", line=dict(width=0), showlegend=False))
-            fig.add_trace(go.Scatter(x=sku_forecast["forecast_date"], y=sku_forecast["forecast_lower"], mode="lines", fill="tonexty", fillcolor="rgba(111,138,166,0.24)", line=dict(width=0), name="Uncertainty"))
+            fig.add_trace(go.Scatter(x=sku_forecast["forecast_date"], y=sku_forecast["forecast_units"], mode="lines+markers", name="Forecast", line={"color": PALETTE["amber"], "width": 3}))
+            fig.add_trace(go.Scatter(x=sku_forecast["forecast_date"], y=sku_forecast["forecast_upper"], mode="lines", line={"width": 0}, showlegend=False))
+            fig.add_trace(go.Scatter(x=sku_forecast["forecast_date"], y=sku_forecast["forecast_lower"], mode="lines", fill="tonexty", fillcolor="rgba(111,138,166,0.24)", line={"width": 0}, name="Uncertainty"))
             fig.update_layout(title=f"Demand Forecast for {selected_sku}")
             st.plotly_chart(style_figure(fig), width="stretch")
             insight_box("Forecast insight", explain_forecast(sku_forecast))

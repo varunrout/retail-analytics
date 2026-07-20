@@ -12,12 +12,17 @@ from models.churn_prediction import ChurnPredictionModel
 from models.customer_segmentation import CustomerSegmentationModel
 from models.demand_forecast import DemandForecastModel
 from models.inventory_scoring import InventoryScoringModel
-from models.price_elasticity import PriceElasticityModel
 from models.model_utils import DATA_DIR, MODELS_DIR, REPORTS_DIR, load_input_tables, save_json
+from models.price_elasticity import PriceElasticityModel
 from models.trend_detection import TrendDetectionModel
 from monitoring.model_monitor import ModelMonitor
 from monitoring.pipeline_monitor import PipelineMonitor
-from orchestration.common import build_feature_outputs, overall_status, run_standard_data_quality_checks, write_data_quality_report
+from orchestration.common import (
+    build_feature_outputs,
+    overall_status,
+    run_standard_data_quality_checks,
+    write_data_quality_report,
+)
 
 
 def run_weekly_pipeline(

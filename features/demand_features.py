@@ -1,11 +1,11 @@
 """
 Demand signal features for forecasting models.
 """
-import pandas as pd
-import numpy as np
-from scipy import stats
 import logging
-from typing import Optional
+
+import numpy as np
+import pandas as pd
+from scipy import stats
 
 logger = logging.getLogger(__name__)
 

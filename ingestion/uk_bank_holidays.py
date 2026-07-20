@@ -12,7 +12,6 @@ Usage::
 
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -22,7 +21,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from ingestion.config import (
     BANK_HOLIDAYS_URL,
     DEMO_MODE,
-    RAW_BANK_HOLIDAYS_DIR,
     get_data_path,
     setup_logging,
 )

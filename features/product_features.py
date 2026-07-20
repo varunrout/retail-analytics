@@ -1,18 +1,18 @@
 """
 Product-level features for demand forecasting and ranking.
 """
-import pandas as pd
-import numpy as np
-from typing import Optional
 import logging
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 
 def compute_product_features(
     transactions_df: pd.DataFrame,
-    inventory_df: Optional[pd.DataFrame] = None,
-    costs_df: Optional[pd.DataFrame] = None,
+    inventory_df: pd.DataFrame | None = None,
+    costs_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """
     Compute per-SKU product features.
@@ -201,7 +201,6 @@ def compute_price_features(transactions_df: pd.DataFrame) -> pd.DataFrame:
             price_changes = price_changes[valid]
             qty_changes = qty_changes[valid]
             if len(price_changes) > 1:
-                from numpy.polynomial import polynomial as P
 
                 coeffs = np.polyfit(price_changes.values, qty_changes.values, 1)
                 elasticity = coeffs[0]

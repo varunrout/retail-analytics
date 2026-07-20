@@ -8,7 +8,6 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +17,12 @@ class PipelineRun:
     pipeline_name: str
     run_id: str
     started_at: datetime
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     status: str = "running"  # running / completed / failed
     steps_completed: list[str] = field(default_factory=list)
     steps_failed: list[str] = field(default_factory=list)
     rows_processed: dict = field(default_factory=dict)
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -60,7 +59,7 @@ class PipelineMonitor:
     def __init__(self, log_dir: Path = Path("data/pipeline_logs")) -> None:
         self.log_dir = log_dir
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.current_run: Optional[PipelineRun] = None
+        self.current_run: PipelineRun | None = None
 
     def _run_log_path(self, pipeline_name: str, run_id: str) -> Path:
         return self.log_dir / f"{pipeline_name}_{run_id}.json"
@@ -109,7 +108,7 @@ class PipelineMonitor:
     def end_run(
         self,
         status: str = "completed",
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> PipelineRun:
         """End the current pipeline run."""
         if self.current_run is None:
@@ -174,7 +173,7 @@ class PipelineMonitor:
         hours_since = (datetime.utcnow() - latest.started_at).total_seconds() / 3600
 
         completed_runs = [r for r in all_runs if r.completed_at is not None]
-        avg_latency: Optional[float] = None
+        avg_latency: float | None = None
         if completed_runs:
             latencies = [
                 (r.completed_at - r.started_at).total_seconds() / 60  # type: ignore[operator]
@@ -184,7 +183,7 @@ class PipelineMonitor:
 
         cutoff = datetime.utcnow() - timedelta(days=7)
         recent = [r for r in all_runs if r.started_at >= cutoff]
-        success_rate: Optional[float] = None
+        success_rate: float | None = None
         if recent:
             success_rate = round(sum(1 for r in recent if r.status == "completed") / len(recent), 4)
 

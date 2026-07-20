@@ -13,7 +13,12 @@ from models.inventory_scoring import InventoryScoringModel
 from models.model_utils import DATA_DIR, MODELS_DIR, REPORTS_DIR, load_input_tables, save_json
 from models.trend_detection import TrendDetectionModel
 from monitoring.pipeline_monitor import PipelineMonitor
-from orchestration.common import build_feature_outputs, overall_status, run_standard_data_quality_checks, write_data_quality_report
+from orchestration.common import (
+    build_feature_outputs,
+    overall_status,
+    run_standard_data_quality_checks,
+    write_data_quality_report,
+)
 
 
 def run_daily_pipeline(

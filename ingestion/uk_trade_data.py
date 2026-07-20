@@ -12,7 +12,6 @@ Usage::
     python -m ingestion.uk_trade_data
 """
 
-import json
 import logging
 from pathlib import Path
 
@@ -147,7 +146,7 @@ def generate_demo_trade_data(seed: int = 42) -> pd.DataFrame:
             partner_weights = np.array([p[1] for p in partners])
             partner_weights /= partner_weights.sum()
 
-            for i, period in enumerate(periods):
+            for _i, period in enumerate(periods):
                 year_diff = period.year + (period.month - 1) / 12 - base_year
                 trend = base_annual * ((1 + cagr) ** year_diff)
 
@@ -169,7 +168,7 @@ def generate_demo_trade_data(seed: int = 42) -> pd.DataFrame:
                 # Distribute across partners
                 month_alloc = rng.dirichlet(partner_weights * 20)
 
-                for partner, alloc in zip(partner_countries, month_alloc):
+                for partner, alloc in zip(partner_countries, month_alloc, strict=False):
                     partner_value = total_monthly * alloc
 
                     # Apply Brexit factor to EU partners

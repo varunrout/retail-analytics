@@ -70,7 +70,7 @@ class BronzeLoader:
             self._bq_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
             self._bq_dataset = os.environ.get("BQ_BRONZE_DATASET", "bronze")
             if not self._bq_project:
-                raise EnvironmentError(
+                raise OSError(
                     "USE_GCP=true but GOOGLE_CLOUD_PROJECT environment variable is not set."
                 )
             try:

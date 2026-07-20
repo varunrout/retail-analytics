@@ -15,7 +15,6 @@ from synthetic.config import (
     HS_CODES,
     IMPORT_DUTY_RATES,
     MARKETPLACE_FEES,
-    N_SKUS,
     RANDOM_SEED,
     get_synthetic_path,
 )

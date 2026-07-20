@@ -26,7 +26,6 @@ import pandas as pd
 
 from ingestion.config import (
     DEMO_MODE,
-    UK_HEALTH_BEAUTY_KEYWORDS,
     get_data_path,
     setup_logging,
 )
@@ -123,7 +122,7 @@ def _generate_demo_trends(
             normalised = np.full(n, 50.0)
         normalised = np.clip(normalised, 0, 100)
 
-        for dt, val in zip(weeks, normalised):
+        for dt, val in zip(weeks, normalised, strict=False):
             records.append(
                 {
                     "date": dt.strftime("%Y-%m-%d"),

@@ -182,7 +182,7 @@ def _generate_demo_products(n: int = 200, seed: int = 42) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     records: list[dict] = []
 
-    for i in range(n):
+    for _i in range(n):
         brand = _BRANDS[rng.integers(0, len(_BRANDS))]
         category = _CATEGORIES[rng.integers(0, len(_CATEGORIES))]
 

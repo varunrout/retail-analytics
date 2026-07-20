@@ -1,12 +1,13 @@
 """
 DQ report generation: creates HTML/markdown summary of data quality checks.
 """
-import pandas as pd
+import logging
 from datetime import datetime
 from pathlib import Path
-import logging
 
-from data_quality.checks import DQReport, CheckResult, DataQualityChecker
+import pandas as pd
+
+from data_quality.checks import DataQualityChecker, DQReport
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ def generate_html_report(report: DQReport) -> str:
             f"<td>{c.rows_failed:,}</td><td>{c.message}</td></tr>\n"
         )
 
-    overall_colour = _STATUS_COLOURS.get(report.overall_status, "#6c757d")
+    _STATUS_COLOURS.get(report.overall_status, "#6c757d")
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><title>DQ Report: {report.dataset_name}</title>

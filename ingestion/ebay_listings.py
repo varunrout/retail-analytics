@@ -11,7 +11,6 @@ Usage::
     python -m ingestion.ebay_listings
 """
 
-import json
 import logging
 import os
 from datetime import datetime, timedelta

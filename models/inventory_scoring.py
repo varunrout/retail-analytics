@@ -6,13 +6,19 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from features.inventory_features import compute_inventory_features
-from models.model_utils import MODELS_DIR, save_json, save_pickle, standardize_costs, standardize_inventory, standardize_transactions
+from models.model_utils import (
+    MODELS_DIR,
+    save_json,
+    save_pickle,
+    standardize_costs,
+    standardize_inventory,
+    standardize_transactions,
+)
 
 
 @dataclass

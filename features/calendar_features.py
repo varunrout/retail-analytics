@@ -2,11 +2,10 @@
 Calendar and temporal features.
 Computes seasonality indices, holiday effects, and time-based features.
 """
-import pandas as pd
-import numpy as np
-from pathlib import Path
 import logging
-from typing import Optional
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +109,7 @@ def compute_holiday_lift(
     df: pd.DataFrame,
     value_col: str,
     date_col: str,
-    bank_holidays_df: Optional[pd.DataFrame] = None,
+    bank_holidays_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """
     Compute lift in value_col during bank holiday periods vs baseline.

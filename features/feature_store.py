@@ -2,19 +2,18 @@
 Feature store: combines all feature sets into a unified feature matrix.
 Saves feature matrix to data/features/ with metadata.
 """
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Literal, Optional
 import json
 import logging
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
 
-from features.calendar_features import add_calendar_features
-from features.product_features import compute_product_features, compute_price_features
-from features.demand_features import compute_rolling_demand, flag_sparse_demand
+import pandas as pd
+
+from features.customer_features import compute_behavioural_features, compute_rfm
+from features.demand_features import flag_sparse_demand
 from features.inventory_features import compute_inventory_features
-from features.customer_features import compute_rfm, compute_behavioural_features
+from features.product_features import compute_price_features, compute_product_features
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ class FeatureStore:
         FeatureMetadata("month_cos", "Cyclic month encoding (cos)", "cos(2*pi*month/12)", "numeric", "none", "daily", ["demand_forecast"], "calendar"),
     ]
 
-    def __init__(self, data_dir: Optional[Path] = None):
+    def __init__(self, data_dir: Path | None = None):
         self.data_dir = data_dir or Path("data")
         self.features_dir = self.data_dir / "features"
         self.features_dir.mkdir(parents=True, exist_ok=True)
@@ -71,8 +70,8 @@ class FeatureStore:
     def build_product_feature_matrix(
         self,
         transactions_df: pd.DataFrame,
-        inventory_df: Optional[pd.DataFrame] = None,
-        costs_df: Optional[pd.DataFrame] = None,
+        inventory_df: pd.DataFrame | None = None,
+        costs_df: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
         """Build per-SKU feature matrix for demand forecasting and inventory scoring."""
         self.logger.info("Building product feature matrix...")
@@ -115,7 +114,7 @@ class FeatureStore:
     def build_customer_feature_matrix(
         self,
         transactions_df: pd.DataFrame,
-        crm_df: Optional[pd.DataFrame] = None,
+        crm_df: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
         """Build per-customer feature matrix for segmentation and churn prediction."""
         self.logger.info("Building customer feature matrix...")
@@ -177,10 +176,10 @@ class FeatureStore:
 
     def run(
         self,
-        transactions_df: Optional[pd.DataFrame] = None,
-        inventory_df: Optional[pd.DataFrame] = None,
-        costs_df: Optional[pd.DataFrame] = None,
-        crm_df: Optional[pd.DataFrame] = None,
+        transactions_df: pd.DataFrame | None = None,
+        inventory_df: pd.DataFrame | None = None,
+        costs_df: pd.DataFrame | None = None,
+        crm_df: pd.DataFrame | None = None,
     ) -> dict:
         """
         Build all feature matrices.

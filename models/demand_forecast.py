@@ -19,7 +19,13 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import Ridge
 
-from models.model_utils import MODELS_DIR, compute_mape, save_json, save_pickle, standardize_transactions
+from models.model_utils import (
+    MODELS_DIR,
+    compute_mape,
+    save_json,
+    save_pickle,
+    standardize_transactions,
+)
 
 # Weeks of history held out for validation, and default replenishment lead time.
 VALIDATION_WEEKS = 4

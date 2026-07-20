@@ -16,7 +16,6 @@ Usage::
 """
 
 import logging
-import re
 from io import BytesIO
 from pathlib import Path
 
@@ -140,7 +139,7 @@ def _generate_demo_transactions(n: int = 50_000, seed: int = 42) -> pd.DataFrame
     random_seconds = rng.integers(8 * 3600, 20 * 3600, size=n)
     invoice_dates = [
         (start + pd.Timedelta(days=int(d), seconds=int(s))).strftime("%Y-%m-%d %H:%M:%S")
-        for d, s in zip(random_days, random_seconds)
+        for d, s in zip(random_days, random_seconds, strict=False)
     ]
 
     # Products (cycle through catalogue with repetition bias)

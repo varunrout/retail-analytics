@@ -87,7 +87,7 @@ def _generate_daily_weather(
 
     # --- Weather codes ------------------------------------------------------
     weather_codes = []
-    for precip, tmax in zip(precip_mm, temp_max_c):
+    for precip, tmax in zip(precip_mm, temp_max_c, strict=False):
         if precip < 0.1:
             code = rng.choice(_SUNNY_CODES)
         elif precip < 2.0:

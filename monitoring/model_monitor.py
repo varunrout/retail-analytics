@@ -4,10 +4,9 @@ Monitors feature distributions and prediction distributions for drift.
 """
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -22,7 +21,7 @@ class DriftResult:
     drift_detected: bool
     drift_score: float
     method: str  # ks_test / psi / chi_squared
-    p_value: Optional[float]
+    p_value: float | None
     threshold: float
     baseline_stats: dict
     current_stats: dict
@@ -211,7 +210,7 @@ class ModelMonitor:
         parquet_path = self.baseline_dir / f"{model_name}_baseline.parquet"
         df.to_parquet(parquet_path, index=False)
 
-    def load_baseline(self, model_name: str) -> Optional[pd.DataFrame]:
+    def load_baseline(self, model_name: str) -> pd.DataFrame | None:
         """Load baseline feature statistics."""
         parquet_path = self.baseline_dir / f"{model_name}_baseline.parquet"
         if not parquet_path.exists():

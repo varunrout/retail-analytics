@@ -100,7 +100,7 @@ def _generate_demo_internet_sales(seed: int = 42) -> pd.DataFrame:
         share = np.clip(share, 0.5, 60.0)
 
         # Sales index: base 100 in Jan 2019; grows faster than total retail
-        base_year_idx = next(
+        next(
             (i for i, p in enumerate(periods) if p.year == 2019 and p.month == 1),
             0,
         )

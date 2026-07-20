@@ -13,7 +13,6 @@ or directly::
 import logging
 import sys
 import time
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -169,11 +168,16 @@ def run_all(force_refresh: bool = False) -> dict[str, dict]:
     # ------------------------------------------------------------------
     # Lazy imports (keep top of file clean; these pull in numpy/pandas)
     # ------------------------------------------------------------------
-    from synthetic.generate_inventory import generate_sku_master, generate_inventory, save_inventory
-    from synthetic.generate_costs import generate_costs, save_costs
-    from synthetic.generate_crm import generate_customers, generate_campaigns, save_customers, save_campaigns
-    from synthetic.generate_transactions import generate_base_transactions, save_transactions
     from synthetic.config import RANDOM_SEED
+    from synthetic.generate_costs import generate_costs, save_costs
+    from synthetic.generate_crm import (
+        generate_campaigns,
+        generate_customers,
+        save_campaigns,
+        save_customers,
+    )
+    from synthetic.generate_inventory import generate_inventory, generate_sku_master, save_inventory
+    from synthetic.generate_transactions import generate_base_transactions, save_transactions
 
     print("\n  Starting synthetic data generation for HealthBeauty360 …\n")
 

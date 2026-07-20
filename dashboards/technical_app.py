@@ -11,7 +11,14 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from features.feature_store import FeatureStore
-from models.model_utils import DATA_DIR, FEATURES_DIR, MODELS_DIR, REPORTS_DIR, SYNTHETIC_DIR, standardize_transactions
+from models.model_utils import (
+    DATA_DIR,
+    FEATURES_DIR,
+    MODELS_DIR,
+    REPORTS_DIR,
+    SYNTHETIC_DIR,
+    standardize_transactions,
+)
 
 st.set_page_config(page_title="HealthBeauty360 Technical Dashboard", page_icon="HB Tech", layout="wide")
 
@@ -117,10 +124,10 @@ def style_figure(fig: go.Figure) -> go.Figure:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=PALETTE["text"], family="IBM Plex Sans"),
-        title_font=dict(color=PALETTE["text"], family="IBM Plex Sans", size=21),
-        legend_font=dict(color=PALETTE["muted"]),
-        margin=dict(l=20, r=20, t=55, b=20),
+        font={"color": PALETTE["text"], "family": "IBM Plex Sans"},
+        title_font={"color": PALETTE["text"], "family": "IBM Plex Sans", "size": 21},
+        legend_font={"color": PALETTE["muted"]},
+        margin={"l": 20, "r": 20, "t": 55, "b": 20},
     )
     fig.update_xaxes(showgrid=False, zeroline=False, color=PALETTE["muted"])
     fig.update_yaxes(showgrid=True, gridcolor=PALETTE["grid"], zeroline=False, color=PALETTE["muted"])
@@ -325,8 +332,8 @@ with tabs[0]:
     sankey = go.Figure(
         data=[
             go.Sankey(
-                node=dict(
-                    label=[
+                node={
+                    "label": [
                         "Sources",
                         "Synthetic Inputs",
                         "Raw/Bronze",
@@ -334,16 +341,16 @@ with tabs[0]:
                         "Model Training",
                         "Serving",
                     ],
-                    color=[PALETTE["steel"], PALETTE["amber"], PALETTE["teal"], PALETTE["lavender"], PALETTE["coral"], PALETTE["ok"]],
-                    pad=22,
-                    thickness=18,
-                ),
-                link=dict(
-                    source=[0, 1, 2, 3, 4],
-                    target=[1, 2, 3, 4, 5],
-                    value=[5, 5, 2, 5, 2],
-                    color=["rgba(115,138,163,0.35)", "rgba(201,145,67,0.35)", "rgba(85,168,157,0.35)", "rgba(136,118,167,0.35)", "rgba(200,100,87,0.35)"],
-                ),
+                    "color": [PALETTE["steel"], PALETTE["amber"], PALETTE["teal"], PALETTE["lavender"], PALETTE["coral"], PALETTE["ok"]],
+                    "pad": 22,
+                    "thickness": 18,
+                },
+                link={
+                    "source": [0, 1, 2, 3, 4],
+                    "target": [1, 2, 3, 4, 5],
+                    "value": [5, 5, 2, 5, 2],
+                    "color": ["rgba(115,138,163,0.35)", "rgba(201,145,67,0.35)", "rgba(85,168,157,0.35)", "rgba(136,118,167,0.35)", "rgba(200,100,87,0.35)"],
+                },
             )
         ]
     )

@@ -2,12 +2,10 @@
 Source freshness monitoring.
 Tracks last-updated timestamps for all data sources and alerts on staleness.
 """
-import os
-from datetime import datetime
-from pathlib import Path
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +13,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FreshnessCheck:
     source_name: str
-    last_updated: Optional[datetime]
+    last_updated: datetime | None
     expected_max_age_hours: int
     status: str  # FRESH / STALE / MISSING
-    hours_since_update: Optional[float]
+    hours_since_update: float | None
 
 
 class FreshnessMonitor:
@@ -52,7 +50,7 @@ class FreshnessMonitor:
         },
     }
 
-    def _get_path_mtime(self, path_str: str) -> Optional[datetime]:
+    def _get_path_mtime(self, path_str: str) -> datetime | None:
         """Return last-modified time for a file or the most recent file in a dir."""
         p = Path(path_str)
         if not p.exists():

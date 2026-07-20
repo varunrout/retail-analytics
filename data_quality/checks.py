@@ -2,13 +2,14 @@
 Data quality check definitions for HealthBeauty360.
 All checks return a CheckResult with status PASS/WARN/FAIL.
 """
-import pandas as pd
-import numpy as np
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Optional, Literal
 import logging
 import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Literal
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -370,9 +371,9 @@ class DataQualityChecker:
         self,
         dataset_name: str,
         df: pd.DataFrame,
-        required_cols: Optional[list[str]] = None,
-        key_cols: Optional[list[str]] = None,
-        price_col: Optional[str] = None,
+        required_cols: list[str] | None = None,
+        key_cols: list[str] | None = None,
+        price_col: str | None = None,
     ) -> DQReport:
         """Run all applicable checks and return DQReport."""
         results: list[CheckResult] = []

@@ -1,11 +1,11 @@
 """
 Inventory health features.
 """
-import pandas as pd
-import numpy as np
-from scipy.stats import norm
 import logging
-from typing import Optional
+
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ def compute_stockout_probability(
     lt_std = demand_std * np.sqrt(lead_time_days)
 
     probabilities = []
-    for soh, mu, sigma in zip(stock_on_hand, lt_mean, lt_std):
+    for soh, mu, sigma in zip(stock_on_hand, lt_mean, lt_std, strict=False):
         if sigma <= 0 or np.isnan(sigma):
             p = 1.0 if soh < mu else 0.0
         else:

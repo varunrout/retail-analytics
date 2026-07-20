@@ -11,7 +11,6 @@ Usage::
     python -m ingestion.shopify_products
 """
 
-import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -223,7 +222,7 @@ def generate_demo_products(n: int = 500, seed: int = 42) -> pd.DataFrame:
 
             base_price = round(rng.uniform(price_min, price_max), 2)
 
-            for v in range(n_variants):
+            for _v in range(n_variants):
                 if generated >= count:
                     break
 
