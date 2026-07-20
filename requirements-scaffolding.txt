@@ -1,0 +1,12 @@
+# Dependencies for the NOT-YET-WIRED platform scaffolding only (future work).
+# The ingestion/ connectors and the dbt/GCP lakehouse layer are not called by the
+# pipeline (see README "Scaffolding / future work"). Install these only if you are
+# working on those layers. Nothing in the live pipeline imports them.
+-r requirements.txt
+requests>=2.31.0
+pytrends>=4.9.2
+python-dotenv>=1.0.0
+tenacity>=8.2.0
+google-cloud-bigquery>=3.11.0
+google-cloud-storage>=2.10.0
+dbt-bigquery>=1.6.0
