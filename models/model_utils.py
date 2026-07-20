@@ -157,8 +157,8 @@ def load_input_tables(force_refresh: bool = False) -> dict[str, pd.DataFrame]:
 
 
 def compute_mape(actual: pd.Series, predicted: pd.Series) -> float:
-    actual_clean = pd.Series(actual).astype(float)
-    predicted_clean = pd.Series(predicted).astype(float)
+    actual_clean = pd.Series(np.asarray(actual, dtype=float))
+    predicted_clean = pd.Series(np.asarray(predicted, dtype=float))
     mask = actual_clean.ne(0) & actual_clean.notna() & predicted_clean.notna()
     if not mask.any():
         return 0.0
