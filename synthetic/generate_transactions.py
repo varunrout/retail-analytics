@@ -30,6 +30,21 @@ logger = logging.getLogger(__name__)
 _CHANNELS: list[str] = ["web", "amazon", "ebay", "physical"]
 _CHANNEL_WEIGHTS: list[float] = [0.50, 0.25, 0.15, 0.10]
 
+# True price elasticities by category, applied to promotional volume so that a
+# discount actually lifts units sold. These latent values drive the synthetic
+# data; models/price_elasticity.py recovers them from observed price variation.
+# Values are negative (lower effective price -> more units); staples are less
+# elastic than discretionary categories.
+_CATEGORY_ELASTICITY: dict[str, float] = {
+    "vitamins_supplements": -0.9,
+    "skincare": -1.1,
+    "bath_body": -1.3,
+    "haircare": -1.4,
+    "sun_care": -1.6,
+    "makeup": -1.8,
+    "fragrance": -2.0,
+}
+
 # Gross margin benchmarks by category
 _CATEGORY_MARGINS: dict[str, float] = {
     "skincare": 0.55,
@@ -232,6 +247,12 @@ def generate_base_transactions(
             qty = -abs(qty) if return_flag else qty
             promo_flag = bool(rng.random() < 0.20)
             discount = round(float(rng.uniform(0.05, 0.40)), 4) if promo_flag else 0.0
+            if discount > 0 and not return_flag:
+                # Effective price falls by `discount`; units respond per the
+                # category's price elasticity with small multiplicative noise.
+                elasticity = _CATEGORY_ELASTICITY.get(str(sku["category"]), -1.3)
+                lift = (1.0 - discount) ** elasticity * float(rng.lognormal(0.0, 0.15))
+                qty = max(1, int(round(qty * lift)))
 
             line_records.append(
                 {
