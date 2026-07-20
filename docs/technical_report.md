@@ -297,8 +297,8 @@ Latest training summary:
 
 - SKU count: 500
 - forecast horizon: 8 weeks
-- mean validation MAPE: 0.66 (WMAPE 1.06)
-- seasonal-naive baseline MAPE: 1.22 (WMAPE 1.40)
+- mean validation MAPE: 0.70 (WMAPE 1.06)
+- seasonal-naive baseline MAPE: 1.23 (WMAPE 1.33)
 - share of SKUs beating the baseline: ~77%
 - fallback SKU count: 0
 
@@ -326,7 +326,7 @@ Implementation:
 Latest summary:
 
 - customer count: ~3,200
-- number of clusters: selected by silhouette sweep over k=2..8 (k=4, silhouette ~0.27)
+- number of clusters: selected by silhouette sweep over k=2..8 (k=4, silhouette ~0.25)
 - largest segment: `At Risk`
 
 Assessment:
@@ -349,17 +349,19 @@ Implementation:
 
 Latest summary:
 
-- customer count: ~3,200
-- positive (churn) rate: ~0.90
-- ROC-AUC: 0.57 (baselines: majority-class 0.50, recency-rule ~0.49)
-- PR-AUC: 0.92 on a 0.90 base rate; calibration curve reported
+- customer count: ~1,800 (customers with pre-cut-off history)
+- positive (churn) rate: ~0.73
+- ROC-AUC: 0.73 (baselines: majority-class 0.50, recency-rule ~0.72)
+- PR-AUC: 0.86 on a 0.73 base rate; calibration MAE ~0.18
 
 Assessment:
 
 - the previous ROC-AUC of 0.4991 came from a self-referential label (churn defined from
   recency, which was also a feature). That leak is fixed
-- with a clean forward-window label the model only modestly beats its baselines: churn is
-  weakly predictable on this synthetic data, and the report says so rather than inflating it
+- the synthetic generator now encodes a documented customer lifetime/churn process:
+  each customer has a latent engagement level and an active lifetime, so pre-cut-off
+  recency and frequency genuinely predict retention. The model recovers it at ROC-AUC 0.73,
+  beating a strong recency baseline (0.72) by adding frequency and value signal
 
 ### 6.4 Inventory scoring
 
@@ -398,8 +400,8 @@ Implementation:
 Latest summary:
 
 - SKU count: 500
-- accelerating count: 1
-- declining count: 8
+- accelerating count: 0
+- declining count: 13
 
 Assessment:
 
@@ -421,8 +423,8 @@ Implementation:
 Latest summary:
 
 - categories estimated: 7
-- elastic categories (CI upper bound below -1): 4
-- mean elasticity: -1.41
+- elastic categories (CI upper bound below -1): 5
+- mean elasticity: -1.36
 
 Assessment:
 

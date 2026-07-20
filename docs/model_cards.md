@@ -10,7 +10,7 @@ Metrics quoted here are produced by `python -m orchestration.run_pipeline --full
 - Method: recursive per-SKU Ridge regression, seasonal-naive fallback for short histories.
 - Output: `demand_forecast_predictions.parquet`, `demand_forecast_metrics.parquet`.
 - Evaluation: scored against a 52-week seasonal-naive baseline on the identical held-out
-  weeks. Mean MAPE 0.66 vs baseline 1.22; WMAPE 1.06 vs 1.40; beats naive on ~77% of SKUs.
+  weeks. Mean MAPE 0.70 vs baseline 1.23; WMAPE 1.06 vs 1.33; beats naive on ~77% of SKUs.
   Absolute error is high (intermittent weekly demand); the reported result is the lift over naive.
 - Decision: each forecast carries a `reorder_point` (lead-time demand + safety stock).
 
@@ -21,7 +21,7 @@ Metrics quoted here are produced by `python -m orchestration.run_pipeline --full
 - Method: log-log OLS with per-SKU fixed effects, so elasticity is identified from
   within-SKU promotional price moves. 95% CIs and p-values reported.
 - Output: `price_elasticity.parquet`.
-- Result: 4 of 7 categories elastic (CI upper bound below -1). Validated against the
+- Result: 5 of 7 categories elastic (CI upper bound below -1). Validated against the
   documented latent elasticities in the synthetic generator.
 - Decision: promote / hold / test per category, with a margin-protected max discount.
 
@@ -30,7 +30,7 @@ Metrics quoted here are produced by `python -m orchestration.run_pipeline --full
 - Objective: group customers into commercially useful cohorts.
 - Inputs: RFM metrics, basket behaviour, CRM profile fields.
 - Method: standardised KMeans; k chosen by a silhouette sweep over k=2..8 (selected k=4,
-  silhouette ~0.27), with ordered business labels.
+  silhouette ~0.25), with ordered business labels.
 - Output: `customer_segments.parquet`.
 - Decision: a recommended commercial action per segment.
 
@@ -43,9 +43,11 @@ Metrics quoted here are produced by `python -m orchestration.run_pipeline --full
   previous recency-derived label, which leaked because recency was also a feature.
 - Method: logistic regression (class-balanced) with one-hot encoded categoricals.
 - Output: `customer_churn_scores.parquet`.
-- Evaluation: ROC-AUC ~0.57 vs majority-class 0.50 and recency-rule ~0.49 baselines;
-  PR-AUC ~0.92 on a 90% base rate; calibration curve reported. Honest read: churn is only
-  weakly predictable on this synthetic data. Each customer carries a recommended action.
+- Evaluation: ROC-AUC ~0.73 vs majority-class 0.50 and recency-rule ~0.72 baselines;
+  PR-AUC ~0.86 on a 73% base rate; calibration MAE ~0.18. The synthetic generator encodes
+  a documented customer lifetime/churn process (engagement and active lifetime drive
+  purchasing), which the model recovers. Recency is the dominant driver; the model adds
+  frequency and value signal on top. Each customer carries a recommended action.
 
 ## inventory_scoring
 

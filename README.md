@@ -16,20 +16,22 @@ This is an honest, self-contained analytics project on **synthetic** data, not a
 production cloud platform. What it actually delivers:
 
 - **Demand forecast**: a recursive per-SKU Ridge model. Absolute accuracy is low
-  because weekly SKU demand is intermittent (mean MAPE **0.66**, WMAPE **1.06**),
+  because weekly SKU demand is intermittent (mean MAPE **0.70**, WMAPE **1.06**),
   but it is scored against a 52-week seasonal-naive baseline on the same held-out
-  weeks and **beats it on 77% of SKUs** (baseline MAPE 1.22, WMAPE 1.40). The lift
+  weeks and **beats it on ~77% of SKUs** (baseline MAPE 1.23, WMAPE 1.33). The lift
   over naive is the result worth reporting, not the raw MAPE.
 - **Price elasticity**: a log-log fixed-effects model recovers per-category
-  elasticities from promotional price variation, with 95% CIs. Four of seven
+  elasticities from promotional price variation, with 95% CIs. Five of seven
   categories are elastic (CI upper bound below -1); each gets a margin-protected
   discount recommendation.
 - **Customer segmentation**: K-Means with the number of clusters chosen by a
-  silhouette sweep (**k=4**, silhouette 0.27). Each segment carries an action.
-- **Churn**: a logistic model on a **leakage-free forward-window label**. It is a
-  hard problem on this data: ROC-AUC **0.57**, only modestly above the majority-class
-  (0.50) and recency-rule (0.49) baselines, on a 90% base rate. Reported honestly
-  with PR-AUC and a calibration curve rather than dressed up.
+  silhouette sweep (**k=4**, silhouette 0.25). Each segment carries an action.
+- **Churn**: a logistic model on a **leakage-free forward-window label** (no purchase
+  in the next 90 days). ROC-AUC **0.73**, beating the majority-class (0.50) and
+  recency-rule (0.72) baselines on a 73% base rate, with a well-calibrated score
+  (calibration MAE 0.18). The synthetic generator encodes a documented customer
+  lifetime/churn process, which the model recovers, so this is a genuine result, not
+  a leak. Recency alone is already strong (0.72); the model adds frequency and value signal.
 - **Inventory scoring** and **trend detection** (Mann-Kendall significance test)
   round out the set. Every model output ends in a decision (reorder point,
   discount, retention action, ranked "act on this" list), not a bare number.
@@ -60,25 +62,25 @@ customers, ~50k transaction lines over 2021-2024):
 
 | Model | Metric | Value | Baseline | Verdict |
 |---|---|---|---|---|
-| Demand forecast | mean MAPE | 0.66 | seasonal-naive 1.22 | beats naive on 77% of SKUs |
-| Demand forecast | WMAPE | 1.06 | seasonal-naive 1.40 | beats naive |
-| Price elasticity | categories elastic | 4 of 7 | n/a | CIs exclude -1 |
-| Segmentation | silhouette @ k=4 | 0.27 | swept k=2..8 | k chosen by score |
-| Churn | ROC-AUC | 0.57 | majority 0.50 / recency 0.49 | weak but honest |
-| Churn | PR-AUC | 0.92 | base rate 0.90 | marginal |
+| Demand forecast | mean MAPE | 0.70 | seasonal-naive 1.23 | beats naive on ~77% of SKUs |
+| Demand forecast | WMAPE | 1.06 | seasonal-naive 1.33 | beats naive |
+| Price elasticity | categories elastic | 5 of 7 | n/a | CIs exclude -1 |
+| Segmentation | silhouette @ k=4 | 0.25 | swept k=2..8 | k chosen by score |
+| Churn | ROC-AUC | 0.73 | majority 0.50 / recency 0.72 | beats both baselines |
+| Churn | PR-AUC | 0.86 | base rate 0.73 | above base rate |
 
 **Recovered price elasticities** (true values are injected into the synthetic
 generator and documented, so the model can be validated against a known target):
 
 | Category | Elasticity | 95% CI | Elastic? |
 |---|---|---|---|
-| makeup | -1.89 | [-2.07, -1.71] | yes |
-| fragrance | -1.81 | [-2.01, -1.61] | yes |
-| sun_care | -1.60 | [-1.82, -1.39] | yes |
-| haircare | -1.32 | [-1.54, -1.11] | yes |
-| bath_body | -1.18 | [-1.37, -0.99] | borderline |
-| vitamins_supplements | -1.03 | [-1.24, -0.82] | no |
-| skincare | -1.01 | [-1.20, -0.81] | no |
+| fragrance | -1.96 | [-2.17, -1.76] | yes |
+| makeup | -1.78 | [-1.96, -1.60] | yes |
+| sun_care | -1.56 | [-1.76, -1.35] | yes |
+| haircare | -1.30 | [-1.51, -1.08] | yes |
+| bath_body | -1.29 | [-1.48, -1.11] | yes |
+| skincare | -0.93 | [-1.12, -0.73] | no |
+| vitamins_supplements | -0.69 | [-0.90, -0.48] | no |
 
 ## Architecture (what actually runs)
 
@@ -161,9 +163,8 @@ required to reproduce any result above:
   cannot execute. Wiring a real dbt project is the natural next step.
 - **Terraform** (`infra/`) for a GCP deployment, never applied.
 
-Two modelling directions would raise this further: enriching the synthetic
-generator with a genuine churn process (currently churn is close to unpredictable
-by design), and replacing the recursive Ridge forecaster with a direct multi-horizon
+One modelling direction would raise this further: replacing the recursive Ridge
+forecaster with a direct multi-horizon
 model (gradient boosting was tested and gave no material lift on this intermittent data).
 
 ## Stack
@@ -178,8 +179,8 @@ dashboards; Faker for synthetic data; pyarrow for the parquet data layer. See
 
 All data is synthetic and generated locally. No real customer, sales or supplier
 data is used. Latent parameters that the models are meant to recover (for example
-category price elasticities) are documented in the generators so results can be
-validated against a known ground truth.
+category price elasticities and the customer churn process) are documented in the
+generators so results can be validated against a known ground truth.
 
 ## Licence
 

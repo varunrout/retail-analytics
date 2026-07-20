@@ -193,6 +193,45 @@ def generate_base_transactions(
     invoice_dates_by_invoice = all_days[chosen_invoice_days]
     invoice_months = pd.Series(invoice_dates_by_invoice).dt.month.values
 
+    # -----------------------------------------------------------------------
+    # Customer lifetime / churn process (drives the churn model)
+    # -----------------------------------------------------------------------
+    # Each customer has a latent engagement level and an active lifetime. They
+    # are eligible to purchase only between sign-up and a churn date, and more
+    # engaged customers both purchase more (higher sampling weight) and churn
+    # later (longer expected lifetime). This makes pre-cut-off recency and
+    # frequency genuinely predictive of future retention, so the churn model has
+    # real, documented signal to recover rather than a random label.
+    n_cust = 10_000
+    cust_ids_pool = np.array([f"CUST{str(i).zfill(5)}" for i in range(1, n_cust + 1)])
+    engagement = rng.lognormal(mean=0.0, sigma=0.9, size=n_cust)
+    date_start_d = np.datetime64(date_start, "D")
+    date_end_d = np.datetime64(date_end, "D")
+    span_days = int((date_end_d - date_start_d).astype(int))
+    signup_offset = rng.integers(0, int(span_days * 0.85), size=n_cust)
+    signup_date = date_start_d + signup_offset.astype("timedelta64[D]")
+    # Expected lifetime scales with engagement; churned customers stop appearing.
+    mean_life_days = 160.0 * (0.5 + engagement)
+    lifetime_days = np.maximum(rng.exponential(mean_life_days), 14.0).round().astype(int)
+    churn_date = signup_date + lifetime_days.astype("timedelta64[D]")
+
+    inv_dates = np.asarray(invoice_dates_by_invoice, dtype="datetime64[D]")
+    inv_month = inv_dates.astype("datetime64[M]")
+    is_guest = rng.random(n_invoices) < 0.15
+    invoice_customer = np.full(n_invoices, None, dtype=object)
+    for month in np.unique(inv_month):
+        idxs = np.where((inv_month == month) & (~is_guest))[0]
+        if idxs.size == 0:
+            continue
+        ref = month.astype("datetime64[D]")
+        eligible = np.where((signup_date <= ref) & (churn_date >= ref))[0]
+        if eligible.size == 0:
+            eligible = np.arange(n_cust)
+        weights = engagement[eligible]
+        weights = weights / weights.sum()
+        chosen = rng.choice(eligible, size=idxs.size, p=weights)
+        invoice_customer[idxs] = cust_ids_pool[chosen]
+
     # Map category → SKU indices
     cat_to_idx: dict[str, np.ndarray] = {
         cat: np.where(sku_df["category"].values == cat)[0]
@@ -216,9 +255,6 @@ def generate_base_transactions(
 
     line_records: list[dict[str, object]] = []
 
-    n_cust = 10_000
-    cust_ids_pool = np.array([f"CUST{str(i).zfill(5)}" for i in range(1, n_cust + 1)])
-
     for invoice_idx, line_count in enumerate(invoice_line_counts):
         invoice_no = invoice_pool[invoice_idx]
         invoice_date = invoice_dates_by_invoice[invoice_idx]
@@ -226,7 +262,7 @@ def generate_base_transactions(
         weights = month_weight_lookup[month]
         sampled_sku_indices = rng.choice(n_skus, size=int(line_count), replace=False, p=weights)
 
-        customer_id = None if rng.random() < 0.15 else str(rng.choice(cust_ids_pool))
+        customer_id = invoice_customer[invoice_idx]
         country = str(
             rng.choice(
                 ["United Kingdom", "Republic of Ireland", "Germany", "France", "USA"],

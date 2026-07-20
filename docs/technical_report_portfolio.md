@@ -178,25 +178,26 @@ The weekly pipeline handles heavier model lifecycle work. It:
 
 - Implementation: recursive Ridge weekly forecaster with a seasonal-naive baseline
 - Coverage: 500 SKUs, 4,000 forecast rows (each with a reorder-point decision)
-- Mean MAPE 0.66 vs seasonal-naive 1.22; WMAPE 1.06 vs 1.40; beats naive on ~77% of SKUs
+- Mean MAPE 0.70 vs seasonal-naive 1.23; WMAPE 1.06 vs 1.33; beats naive on ~77% of SKUs
 
 ### Price Elasticity
 
 - Implementation: log-log OLS with per-SKU fixed effects; 95% CIs per category
-- 4 of 7 categories elastic (CI upper bound below -1); mean elasticity -1.41
+- 5 of 7 categories elastic (CI upper bound below -1); mean elasticity -1.36
 - Recovers the documented latent elasticities in the synthetic generator
 
 ### Customer Segmentation
 
 - Implementation: KMeans over RFM and behavioural features
 - Scored customers: ~3,200
-- Clusters: silhouette-selected (k=4, silhouette ~0.27); largest segment At Risk
+- Clusters: silhouette-selected (k=4, silhouette ~0.25); largest segment At Risk
 
 ### Churn Prediction
 
 - Implementation: logistic regression on a leakage-free forward-window (90-day) label
-- Customer count: ~3,200; churn rate ~0.90
-- ROC-AUC: 0.57 (baselines: majority 0.50, recency ~0.49); PR-AUC 0.92; calibration reported
+- Customer count: ~1,800; churn rate ~0.73
+- ROC-AUC: 0.73 (baselines: majority 0.50, recency ~0.72); PR-AUC 0.86; calibration MAE ~0.18
+- Recovers a documented customer lifetime/churn process encoded in the synthetic generator
 
 ### Inventory Scoring
 
@@ -206,11 +207,11 @@ The weekly pipeline handles heavier model lifecycle work. It:
 ### Trend Detection
 
 - Implementation: Mann-Kendall significance test plus recent z-score; ranked action list
-- SKU count: 500; accelerating 1; declining 8
+- SKU count: 500; accelerating 0; declining 13
 
 > **Interpretation note**
 >
-> Not every model is strong, and that is reported honestly. Churn is only weakly predictable on this synthetic data (ROC-AUC 0.57, just above its baselines), and the demand model's value is its lift over a seasonal-naive baseline rather than a low absolute MAPE. The project value is honest evaluation across the full lifecycle: data contracts, feature generation, baselines and confidence intervals, orchestration, monitoring, persistence, and presentation.
+> Every model is measured against a baseline and reported honestly. Churn recovers a documented lifetime/churn process at ROC-AUC 0.73, beating a strong recency baseline; the demand model's value is its lift over seasonal-naive rather than a low absolute MAPE. The project value is honest evaluation across the full lifecycle: data contracts, feature generation, baselines and confidence intervals, orchestration, monitoring, persistence, and presentation.
 
 ---
 
