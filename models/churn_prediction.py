@@ -174,6 +174,12 @@ class ChurnPredictionModel:
         X = self._prepare_design(eval_frame, numeric, categorical)
         y = eval_frame["churned"]
 
+        # Degenerate case (common on very small/short samples): the forward window
+        # yields a single class, so no classifier can be fit. Score everyone at the
+        # base rate and report the honest degenerate result rather than crashing.
+        if y.nunique() < 2 or y.value_counts().min() < 8:
+            return self._degenerate_result(eval_frame, tx, crm_df, campaigns_df, max_date, horizon_days, float(y.mean()))
+
         stratify = y if y.value_counts().min() >= 2 else None
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.25, random_state=42, stratify=stratify
@@ -274,6 +280,31 @@ class ChurnPredictionModel:
             "coefficients": coefficient_table,
             "summary": summary,
         }
+
+    def _degenerate_result(self, eval_frame, tx, crm_df, campaigns_df, max_date, horizon_days, positive_rate):
+        score_frame = self._feature_frame(tx, max_date, crm_df, campaigns_df)
+        score_frame = score_frame[score_frame["customer_id"].notna()].copy()
+        score_frame["churn_probability"] = round(positive_rate, 4)
+        score_frame["risk_band"] = score_frame["churn_probability"].apply(risk_band_from_probability)
+        score_frame["recommended_action"] = score_frame["risk_band"].map(RETENTION_ACTION)
+        summary = ChurnPredictionSummary(
+            model_name="churn_prediction",
+            trained_at=datetime.utcnow().isoformat(),
+            customer_count=int(eval_frame["customer_id"].nunique()),
+            horizon_days=horizon_days,
+            positive_rate=round(positive_rate, 4),
+            roc_auc=float("nan"),
+            pr_auc=float("nan"),
+            baseline_majority_auc=0.5,
+            baseline_recency_auc=float("nan"),
+            baseline_majority_pr_auc=round(positive_rate, 4),
+            accuracy=round(max(positive_rate, 1 - positive_rate), 4),
+            calibration_mae=float("nan"),
+        )
+        save_pickle({"pipeline": None, "degenerate": True, "summary": summary}, self.artifact_path)
+        score_frame.to_parquet(self.scored_path, index=False)
+        save_json({"summary": summary, "note": "single-class forward-window label; base-rate scoring"}, self.summary_path)
+        return {"artifact_path": self.artifact_path, "scores": score_frame, "coefficients": None, "summary": summary}
 
     @staticmethod
     def _calibration(y_true: np.ndarray, proba: np.ndarray, bins: int = 5) -> list[dict[str, float]]:

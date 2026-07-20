@@ -4,12 +4,14 @@ from models.churn_prediction import ChurnPredictionModel
 from models.customer_segmentation import CustomerSegmentationModel
 from models.demand_forecast import DemandForecastModel
 from models.inventory_scoring import InventoryScoringModel
+from models.price_elasticity import PriceElasticityModel
 from models.trend_detection import TrendDetectionModel
 
 __all__ = [
-	"ChurnPredictionModel",
-	"CustomerSegmentationModel",
-	"DemandForecastModel",
-	"InventoryScoringModel",
-	"TrendDetectionModel",
+    "ChurnPredictionModel",
+    "CustomerSegmentationModel",
+    "DemandForecastModel",
+    "InventoryScoringModel",
+    "PriceElasticityModel",
+    "TrendDetectionModel",
 ]

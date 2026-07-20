@@ -1,18 +1,18 @@
 """
 Customer-level RFM and behavioural features.
 """
-import pandas as pd
-import numpy as np
-from datetime import datetime, date
-from typing import Optional
 import logging
+from datetime import date
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 
 def compute_rfm(
     transactions_df: pd.DataFrame,
-    reference_date: Optional[date] = None,
+    reference_date: date | None = None,
     customer_col: str = "customer_id",
     date_col: str = "invoice_date",
     value_col: str = "net_revenue_gbp",
@@ -51,7 +51,7 @@ def compute_rfm(
             df_period[value_col] = 1.0
 
     rfm = (
-        df_period[df_period.get("is_return", pd.Series(False, index=df_period.index)) != True]
+        df_period[~df_period.get("is_return", pd.Series(False, index=df_period.index)).astype(bool)]
         .groupby(customer_col)
         .agg(
             last_purchase_date=(date_col, "max"),
