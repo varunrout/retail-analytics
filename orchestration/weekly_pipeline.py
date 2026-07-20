@@ -12,6 +12,7 @@ from models.churn_prediction import ChurnPredictionModel
 from models.customer_segmentation import CustomerSegmentationModel
 from models.demand_forecast import DemandForecastModel
 from models.inventory_scoring import InventoryScoringModel
+from models.price_elasticity import PriceElasticityModel
 from models.model_utils import DATA_DIR, MODELS_DIR, REPORTS_DIR, load_input_tables, save_json
 from models.trend_detection import TrendDetectionModel
 from monitoring.model_monitor import ModelMonitor
@@ -67,6 +68,10 @@ def run_weekly_pipeline(
             costs_df=pipeline_tables.get("costs"),
         )
         trend_result = TrendDetectionModel(artifact_dir=runtime_artifact_dir).run(pipeline_tables["transactions"])
+        elasticity_result = PriceElasticityModel(artifact_dir=runtime_artifact_dir).train(
+            pipeline_tables["transactions"],
+            inventory_df=pipeline_tables.get("inventory"),
+        )
         monitor.log_step(
             "train_models",
             rows_processed=(
@@ -75,6 +80,7 @@ def run_weekly_pipeline(
                 + len(churn_result["scores"])
                 + len(inventory_result["scores"])
                 + len(trend_result["sku_trends"])
+                + len(elasticity_result["table"])
             ),
         )
 
@@ -97,6 +103,7 @@ def run_weekly_pipeline(
                 "churn_scores_rows": len(churn_result["scores"]),
                 "inventory_scores_rows": len(inventory_result["scores"]),
                 "trend_detection_rows": len(trend_result["sku_trends"]),
+                "price_elasticity_rows": len(elasticity_result["table"]),
             },
         }
         summary_path = save_json(summary, runtime_report_dir / "weekly_pipeline_summary.json")
