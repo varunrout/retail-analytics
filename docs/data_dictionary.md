@@ -11,6 +11,8 @@
 - `customer_id`: nullable customer identifier.
 - `category_l1`: normalized product category.
 - `channel`: order channel.
+- `is_promotional`: whether the line was sold on promotion.
+- `discount_pct`: promotional discount applied (0 when not on promotion); drives the price-elasticity model.
 - `net_revenue_gbp`: revenue net of discount.
 - `gross_margin_gbp`: estimated gross margin amount.
 

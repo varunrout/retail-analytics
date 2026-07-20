@@ -109,13 +109,14 @@ These matrices provide the training and scoring surface for the implemented ML w
 
 ### 3.4 Modeling
 
-Five analytical model workflows are implemented:
+Six analytical model workflows are implemented, each evaluated against a baseline:
 
 1. demand forecasting
-2. customer segmentation
-3. churn prediction
-4. inventory scoring
-5. trend detection
+2. price elasticity
+3. customer segmentation
+4. churn prediction
+5. inventory scoring
+6. trend detection
 
 ### 3.5 Serving and presentation
 
@@ -175,43 +176,41 @@ The weekly pipeline handles heavier model lifecycle work. It:
 
 ### Demand Forecast
 
-- Implementation: recursive ridge-based weekly forecaster
-- Coverage: 500 SKUs
-- Current forecast output: 4,000 rows
-- Current mean validation MAPE: 0.6439
+- Implementation: recursive Ridge weekly forecaster with a seasonal-naive baseline
+- Coverage: 500 SKUs, 4,000 forecast rows (each with a reorder-point decision)
+- Mean MAPE 0.66 vs seasonal-naive 1.22; WMAPE 1.06 vs 1.40; beats naive on ~77% of SKUs
+
+### Price Elasticity
+
+- Implementation: log-log OLS with per-SKU fixed effects; 95% CIs per category
+- 4 of 7 categories elastic (CI upper bound below -1); mean elasticity -1.41
+- Recovers the documented latent elasticities in the synthetic generator
 
 ### Customer Segmentation
 
-- Implementation: KMeans clustering over RFM and behavioral features
-- Current scored customers: 3,224
-- Segment count: 5
-- Largest segment: Dormant
+- Implementation: KMeans over RFM and behavioural features
+- Scored customers: ~3,200
+- Clusters: silhouette-selected (k=4, silhouette ~0.27); largest segment At Risk
 
 ### Churn Prediction
 
-- Implementation: logistic regression with encoded categorical drivers
-- Current customer count: 3,224
-- Positive class rate: 0.7627
-- ROC-AUC: 0.4991
-- Accuracy: 0.7630
+- Implementation: logistic regression on a leakage-free forward-window (90-day) label
+- Customer count: ~3,200; churn rate ~0.90
+- ROC-AUC: 0.57 (baselines: majority 0.50, recency ~0.49); PR-AUC 0.92; calibration reported
 
 ### Inventory Scoring
 
 - Implementation: business scoring blended with anomaly detection
-- Current SKU count: 500
-- Reorder recommendations: 438
-- Mean stockout risk score: 29.52
+- SKU count: 500, with reorder recommendations and suggested quantities
 
 ### Trend Detection
 
-- Implementation: rolling demand diagnostics plus slope/spike classification
-- Current SKU count: 500
-- Accelerating SKUs: 3
-- Declining SKUs: 218
+- Implementation: Mann-Kendall significance test plus recent z-score; ranked action list
+- SKU count: 500; accelerating 1; declining 8
 
 > **Interpretation note**
 >
-> Not every metric is strong in a business sense, especially churn ROC-AUC. That is acceptable here because the project value is not only predictive accuracy. It is also about demonstrating the full engineering lifecycle around models: data contracts, feature generation, orchestration, monitoring, persistence, and presentation.
+> Not every model is strong, and that is reported honestly. Churn is only weakly predictable on this synthetic data (ROC-AUC 0.57, just above its baselines), and the demand model's value is its lift over a seasonal-naive baseline rather than a low absolute MAPE. The project value is honest evaluation across the full lifecycle: data contracts, feature generation, baselines and confidence intervals, orchestration, monitoring, persistence, and presentation.
 
 ---
 

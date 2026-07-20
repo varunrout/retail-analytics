@@ -6,7 +6,7 @@
 
 ## 1. Executive Technical Summary
 
-HealthBeauty360 is an end-to-end retail analytics platform built around a local-first demo workflow with an upgrade path toward GCP-backed execution. The current implemented system covers synthetic ingestion, data quality validation, feature engineering, five machine learning model workflows, daily and weekly orchestration, artifact persistence, FastAPI serving stubs, and two Streamlit dashboards: one business-facing and one engineering-facing.
+HealthBeauty360 is an end-to-end retail analytics platform built around a local-first demo workflow with an upgrade path toward GCP-backed execution. The current implemented system covers synthetic ingestion, data quality validation, feature engineering, six machine learning model workflows (each evaluated against a baseline), daily and weekly orchestration, artifact persistence, a FastAPI serving layer that reads the trained artifacts, and two Streamlit dashboards: one business-facing and one engineering-facing.
 
 In demo mode, the platform runs entirely from local artifacts under `data/`. Synthetic source tables are generated into `data/synthetic`, transformed into model-ready feature matrices under `data/features`, scored and serialized into `data/models`, and monitored through reports in `data/reports` and structured logs in `data/pipeline_logs`.
 
@@ -263,7 +263,7 @@ Limitations:
 
 ## 6. Model Layer
 
-Five model workflows are implemented under `models/`.
+Six model workflows are implemented under `models/`. Every model is scored against a sensible baseline on held-out data, and results are reported straight.
 
 ```mermaid
 flowchart TD
@@ -272,11 +272,13 @@ flowchart TD
   A --> D[churn_prediction]
   A --> E[inventory_scoring]
   A --> F[trend_detection]
+  A --> H[price_elasticity]
   B --> G[data/models]
   C --> G
   D --> G
   E --> G
   F --> G
+  H --> G
 ```
 
 ### 6.1 Demand forecast
@@ -295,17 +297,21 @@ Latest training summary:
 
 - SKU count: 500
 - forecast horizon: 8 weeks
-- mean validation MAPE: 0.6439
+- mean validation MAPE: 0.66 (WMAPE 1.06)
+- seasonal-naive baseline MAPE: 1.22 (WMAPE 1.40)
+- share of SKUs beating the baseline: ~77%
 - fallback SKU count: 0
 
 Current output volume:
 
-- 4,000 forecast rows
+- 4,000 forecast rows, each carrying a `reorder_point` decision
 
 Assessment:
 
-- appropriate for a demo and controlled synthetic environment
-- metric quality is usable for illustration but not yet production-grade forecasting performance
+- absolute error is high because weekly SKU demand is intermittent, so the headline
+  result is the lift over a 52-week seasonal-naive baseline scored on the identical
+  held-out weeks, not the raw MAPE
+- gradient boosting was tested and gave no material lift, so the simpler model is retained
 
 ### 6.2 Customer segmentation
 
@@ -319,15 +325,15 @@ Implementation:
 
 Latest summary:
 
-- customer count: 3,224
-- segment count: 5
-- largest segment: `Dormant`
+- customer count: ~3,200
+- number of clusters: selected by silhouette sweep over k=2..8 (k=4, silhouette ~0.27)
+- largest segment: `At Risk`
 
 Assessment:
 
-- good for CRM demonstration and dashboard storytelling
-- segment naming is deterministic and business-oriented
-- clustering is unsupervised and should be monitored for segment stability if extended to real data
+- k is chosen from the silhouette curve rather than fixed, and the curve is persisted
+- each segment carries a recommended commercial action
+- clustering is unsupervised and should be monitored for stability if extended to real data
 
 ### 6.3 Churn prediction
 
@@ -337,20 +343,23 @@ Purpose:
 
 Implementation:
 
-- logistic regression with standardized numerical features and one-hot encoded categorical variables
+- forward-window churn label (no purchase in the next 90 days), with features computed
+  strictly before the cut-off so recency is a valid predictor rather than the label itself
+- logistic regression (class-balanced) with standardised numeric and one-hot categorical features
 
 Latest summary:
 
-- customer count: 3,224
-- positive rate: 0.7627
-- ROC-AUC: 0.4991
-- accuracy: 0.7630
+- customer count: ~3,200
+- positive (churn) rate: ~0.90
+- ROC-AUC: 0.57 (baselines: majority-class 0.50, recency-rule ~0.49)
+- PR-AUC: 0.92 on a 0.90 base rate; calibration curve reported
 
 Assessment:
 
-- current accuracy largely reflects class imbalance
-- ROC-AUC near random indicates the current synthetic label construction is not strongly predictive
-- this model is structurally complete but analytically weak in the present demo data regime
+- the previous ROC-AUC of 0.4991 came from a self-referential label (churn defined from
+  recency, which was also a feature). That leak is fixed
+- with a clean forward-window label the model only modestly beats its baselines: churn is
+  weakly predictable on this synthetic data, and the report says so rather than inflating it
 
 ### 6.4 Inventory scoring
 
@@ -382,23 +391,48 @@ Purpose:
 
 Implementation:
 
-- rolling demand diagnostics plus relative trend slopes and spike scores
+- Mann-Kendall monotonic trend test per SKU (p < 0.05) combined with a recent z-score;
+  accelerating/declining labels require a statistically significant test
+- emits a ranked "act on this" priority list
 
 Latest summary:
 
 - SKU count: 500
-- accelerating count: 3
-- declining count: 218
+- accelerating count: 1
+- declining count: 8
 
 Assessment:
 
-- interpretable and dashboard-friendly
-- suitable for assortment watchlists
-- would benefit from explicit confidence thresholds or change-point logic if expanded for production use
+- labels now reflect a statistical signal, not a raw slope
+- interpretable and dashboard-friendly, suitable for assortment watchlists
+
+### 6.6 Price elasticity
+
+Purpose:
+
+- estimate category price elasticity of demand and safe discount depth
+
+Implementation:
+
+- log-log OLS with per-SKU fixed effects, identifying elasticity from within-SKU
+  promotional price variation (effective price = list price net of discount)
+- 95% confidence intervals and p-values per category
+
+Latest summary:
+
+- categories estimated: 7
+- elastic categories (CI upper bound below -1): 4
+- mean elasticity: -1.41
+
+Assessment:
+
+- recovers the documented latent elasticities injected into the synthetic generator,
+  which validates the estimator against a known target
+- each category ends in a decision: promote, hold, or test, with a margin-protected max discount
 
 > **Modeling note**
 >
-> The model layer is valuable not only because five workflows exist, but because they are all artifact-backed and orchestrated. That is a stronger engineering signal than isolated notebook models.
+> The model layer is valuable not only because six workflows exist, but because each is evaluated against a baseline, artifact-backed, and orchestrated. Honest evaluation, including a fixed label-leakage bug and a cleanly reported weak churn result, is a stronger signal than isolated notebook models.
 
 ---
 
@@ -482,7 +516,7 @@ Responsibilities:
 - load current landed inputs
 - run DQ checks
 - rebuild feature matrices
-- retrain all five model workflows
+- retrain all six model workflows
 - persist monitoring baselines
 - write pipeline summary
 

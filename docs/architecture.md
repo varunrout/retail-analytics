@@ -1,33 +1,44 @@
 # Architecture
 
-HealthBeauty360 follows a demo-first lakehouse pattern.
+HealthBeauty360 runs end to end on synthetic data. The live path is:
+synthetic generation, feature engineering, model training, artifact persistence,
+serving via FastAPI and Streamlit. A lakehouse/dbt/GCP path exists only as unwired
+scaffolding (see the README "Scaffolding / future work" section).
 
-## Layers
+## Live layers
 
-1. Ingestion collects source extracts and synthetic generators into raw files.
-2. Raw-to-bronze persists append-only operational snapshots.
-3. Bronze-to-silver SQL models shape conformed dimensions and facts.
-4. Feature engineering creates product and customer feature matrices in `data/features`.
-5. Model training writes scored outputs and serialized artifacts to `data/models`.
-6. Serving exposes demo APIs through FastAPI and the dashboard through Streamlit.
+1. Synthetic generation writes source tables to `data/synthetic`.
+2. Feature engineering creates product and customer feature matrices in `data/features`.
+3. Model training writes scored outputs and serialised artifacts to `data/models`.
+4. Serving exposes the trained artifacts through FastAPI, and dashboards through Streamlit.
 
-## Operational Cadence
+## Scaffolding (present but not wired into the pipeline)
 
-- Daily pipeline: refresh synthetic inputs if required, run data quality checks, rebuild features, refresh churn, inventory, and trend outputs.
-- Weekly pipeline: rerun data quality checks, rebuild features, retrain all five models, and update monitoring baselines.
+- `ingestion/`: connectors for real UK sources, run standalone, not called by the pipeline.
+- `raw_to_bronze/`, `bronze_to_silver/`: dbt-style SQL medallion models without a
+  `dbt_project.yml`, so they cannot execute yet.
+- `infra/`: Terraform for a GCP deployment, never applied.
 
-## Runtime Outputs
+## Operational cadence
 
-- `data/synthetic`: generated demo source tables.
+- Daily pipeline: refresh synthetic inputs if required, run data quality checks, rebuild
+  features, refresh inventory and trend outputs.
+- Weekly pipeline: rerun data quality checks, rebuild features, retrain all six models
+  (demand, price elasticity, segmentation, churn, inventory, trend), update monitoring baselines.
+
+## Runtime outputs
+
+- `data/synthetic`: generated source tables.
 - `data/features`: saved feature matrices and metadata sidecars.
-- `data/models`: model artifacts, forecasts, scores, and summaries.
+- `data/models`: model artifacts, forecasts, scores, elasticities, and summaries.
 - `data/reports`: data quality and pipeline summary reports.
 - `data/pipeline_logs`: structured pipeline execution logs.
 
-## Model Inventory
+## Model inventory
 
-- `demand_forecast`: recursive weekly ridge-based SKU forecasting with seasonal fallback.
-- `customer_segmentation`: KMeans clustering on RFM and behavioural features.
-- `churn_prediction`: logistic regression with CRM and campaign engagement features.
+- `demand_forecast`: recursive weekly Ridge SKU forecasting, seasonal-naive baseline and fallback.
+- `price_elasticity`: log-log fixed-effects category elasticity with confidence intervals.
+- `customer_segmentation`: KMeans on RFM and behavioural features, silhouette-selected k.
+- `churn_prediction`: logistic regression on a leakage-free forward-window label.
 - `inventory_scoring`: risk scoring plus anomaly detection for stock health.
-- `trend_detection`: demand slope and spike detection for SKU and category momentum.
+- `trend_detection`: Mann-Kendall significance test for SKU and category momentum.

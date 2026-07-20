@@ -2,76 +2,69 @@
 
 ## One-line summary
 
-HealthBeauty360 is an end-to-end retail analytics platform that demonstrates ingestion, data quality validation, feature engineering, model training, orchestration, monitoring, API serving, and dashboard delivery in a reproducible Python codebase.
+HealthBeauty360 is a self-contained retail analytics project on synthetic UK health and
+beauty data: feature engineering, six analytical models evaluated against baselines, an
+artifact-backed FastAPI service, and business/technical dashboards, all reproducible offline.
 
 ## What this project does
 
-- generates or ingests retail source data
-- validates landed datasets with structured DQ checks
+- generates a labelled synthetic retail dataset (500 SKUs, ~10k customers, ~50k transactions)
+- validates datasets with structured data-quality checks
 - builds reusable product and customer feature sets
-- trains and scores five analytical model workflows
+- trains and scores six analytical model workflows, each against a baseline
 - persists artifacts and reports for inspection
-- surfaces outputs through business and technical dashboards
+- serves the trained artifacts through a FastAPI service and two Streamlit dashboards
 
 ## Why it stands out
 
-Most portfolio projects stop at notebooks or static dashboards. This one shows an implemented system:
+Most portfolio projects stop at notebooks or over-claim in the README. This one is honest
+and end to end:
 
-- local ingestion and persistence
-- daily and weekly orchestration
-- model artifacts and monitoring baselines
-- technical and business presentation layers
-- reproducible test-backed execution
+- every model is scored against a sensible baseline on held-out data, and the result is
+  reported straight (the demand model beats seasonal-naive on ~77% of SKUs; churn is only
+  weakly predictable and says so)
+- the API serves real model artifacts, not fabricated numbers
+- daily and weekly orchestration with monitoring baselines
+- reproducible, test-backed execution with CI (ruff + pytest)
 
 ## Implemented model workflows
 
-1. demand forecasting
-2. customer segmentation
-3. churn prediction
-4. inventory scoring
-5. trend detection
+1. demand forecasting (Ridge, seasonal-naive baseline, reorder-point decision)
+2. price elasticity (log-log fixed effects, confidence intervals, discount guidance)
+3. customer segmentation (KMeans, silhouette-selected k, per-segment action)
+4. churn prediction (leakage-free forward-window label, baselines, calibration)
+5. inventory scoring (risk score plus anomaly detection)
+6. trend detection (Mann-Kendall significance test, ranked action list)
 
 ## Current technical highlights
 
-- latest daily and weekly DQ status: PASS
-- 50,000 synthetic transactions generated in demo mode
-- 500 SKU-level product feature rows
-- 3,224 customer feature rows
-- 4,000 demand forecast output rows
-- separate business and engineering dashboards
+- 50,000 synthetic transactions; 500 SKU-level and ~3,200 customer feature rows
+- demand: MAPE 0.66 vs seasonal-naive 1.22, beats naive on ~77% of SKUs
+- elasticity: 4 of 7 categories elastic, recovered against a known target with 95% CIs
+- churn: ROC-AUC 0.57 (baselines 0.50 / 0.49), reported with PR-AUC and calibration
+- CI green: ruff lint, synthetic seed, and pytest on every push
 
 ## Tech stack
 
-- Python
-- pandas
-- scikit-learn
-- FastAPI
-- Streamlit
-- Plotly
-- pytest
-- Terraform
-- Docker
+Python, pandas, numpy, scikit-learn, statsmodels, pymannkendall, FastAPI, Streamlit,
+Plotly, pytest, ruff. A dbt/BigQuery/Terraform path exists as unwired scaffolding.
 
 ## What this demonstrates to employers
 
-- data engineering fundamentals
+- honest model evaluation: baselines, confidence intervals, and negative results reported cleanly
 - ML workflow design beyond a single notebook
-- orchestration and artifact management
+- orchestration, artifact management, and serving that actually reads the artifacts
 - technical documentation and observability thinking
-- ability to build usable analytics interfaces for different audiences
 
 ## Good resume framing
 
-Use language like:
-
-> Built an end-to-end retail analytics platform with synthetic and API-based ingestion, structured data quality validation, feature engineering, five ML workflows, daily/weekly orchestration, artifact persistence, and dual business/technical dashboards.
+> Built a reproducible retail analytics project on synthetic UK health and beauty data:
+> feature engineering, six models each evaluated against a baseline (demand forecasting,
+> price elasticity, segmentation, churn, inventory scoring, trend detection), an
+> artifact-backed FastAPI service, dual dashboards, and CI.
 
 ## Good interview framing
 
-Emphasize that the project was designed to answer three questions:
-
-1. How does data enter and get validated?
-2. How do features and models get produced repeatedly?
-3. How do business and engineering users inspect the output differently?
-
-That framing makes the project sound like platform engineering work rather than just model experimentation.
+Lead with the honesty: every model is measured against a baseline, and where the signal is
+weak (churn) the project says so rather than inflating a number. That, plus fixing a real
+label-leakage bug and wiring the API to real artifacts, is the story worth telling.
