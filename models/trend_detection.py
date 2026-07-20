@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pymannkendall as mk
 
 from features.demand_features import compute_rolling_demand, compute_trend_slope
 from models.model_utils import MODELS_DIR, save_json, standardize_transactions
@@ -23,7 +24,16 @@ class TrendDetectionSummary:
 
 
 class TrendDetectionModel:
-    """Detect growth, decline, and spike signals across SKUs and categories."""
+    """Detect growth, decline, and spike signals across SKUs and categories.
+
+    Trend significance is tested with the Mann-Kendall non-parametric monotonic
+    trend test on each SKU\'s weekly series (p < 0.05), combined with a recent
+    z-score. A SKU is only labelled accelerating/declining when the Mann-Kendall
+    test is significant, so labels reflect a statistical signal, not a raw slope.
+    """
+
+    MK_WINDOW_WEEKS = 26
+    MK_ALPHA = 0.05
 
     def __init__(self, artifact_dir: Path | None = None) -> None:
         self.artifact_dir = artifact_dir or MODELS_DIR
@@ -31,6 +41,29 @@ class TrendDetectionModel:
         self.sku_path = self.artifact_dir / "trend_detection_sku.parquet"
         self.category_path = self.artifact_dir / "trend_detection_category.parquet"
         self.summary_path = self.artifact_dir / "trend_detection_summary.json"
+
+
+    def _mann_kendall(self, weekly: pd.DataFrame) -> pd.DataFrame:
+        """Per-SKU Mann-Kendall test on the recent weekly series."""
+        rows: list[dict[str, object]] = []
+        for stock_code, group in weekly.sort_values("week_start").groupby("stock_code"):
+            series = group["quantity"].tail(self.MK_WINDOW_WEEKS).to_numpy(dtype=float)
+            if len(series) < 8 or np.all(series == series[0]):
+                rows.append({"stock_code": stock_code, "mk_trend": "no trend", "mk_pvalue": 1.0, "mk_slope": 0.0})
+                continue
+            try:
+                result = mk.original_test(series, alpha=self.MK_ALPHA)
+                rows.append(
+                    {
+                        "stock_code": stock_code,
+                        "mk_trend": result.trend,
+                        "mk_pvalue": float(result.p),
+                        "mk_slope": float(result.slope),
+                    }
+                )
+            except Exception:
+                rows.append({"stock_code": stock_code, "mk_trend": "no trend", "mk_pvalue": 1.0, "mk_slope": 0.0})
+        return pd.DataFrame(rows)
 
     def run(self, transactions_df: pd.DataFrame) -> dict[str, object]:
         transactions = standardize_transactions(transactions_df)
@@ -69,16 +102,30 @@ class TrendDetectionModel:
             (sku_trends["recent_4w_avg"] - sku_trends["baseline_mean"])
             / sku_trends["baseline_std"].replace(0.0, np.nan)
         ).fillna(0.0)
+        mk_stats = self._mann_kendall(weekly)
+        sku_trends = sku_trends.merge(mk_stats, on="stock_code", how="left")
+        sku_trends["mk_trend"] = sku_trends["mk_trend"].fillna("no trend")
+        sku_trends["mk_pvalue"] = sku_trends["mk_pvalue"].fillna(1.0)
+        sku_trends["mk_significant"] = sku_trends["mk_pvalue"] < self.MK_ALPHA
         sku_trends["trend_label"] = np.select(
             [
-                (sku_trends["relative_trend_slope"] >= 0.02) & (sku_trends["z_score_recent_sales"] >= 1.5),
-                sku_trends["relative_trend_slope"] >= 0.01,
-                sku_trends["relative_trend_slope"] <= -0.01,
+                (sku_trends["mk_trend"] == "increasing")
+                & sku_trends["mk_significant"]
+                & (sku_trends["z_score_recent_sales"] >= 1.5),
+                (sku_trends["mk_trend"] == "increasing") & sku_trends["mk_significant"],
+                (sku_trends["mk_trend"] == "decreasing") & sku_trends["mk_significant"],
             ],
             ["accelerating", "growing", "declining"],
             default="stable",
         )
-
+        # Ranked "act on this" priority: significant, fast-moving SKUs first.
+        sku_trends["priority_score"] = (
+            sku_trends["mk_slope"].abs().fillna(0.0)
+            * (-np.log10(sku_trends["mk_pvalue"].clip(lower=1e-6)))
+        )
+        sku_trends["action_rank"] = (
+            sku_trends["priority_score"].rank(ascending=False, method="first").astype(int)
+        )
         category_trends = (
             sku_trends.groupby("category_l1", as_index=False)
             .agg(
